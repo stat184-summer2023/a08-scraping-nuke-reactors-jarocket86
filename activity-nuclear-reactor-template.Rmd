@@ -1,34 +1,58 @@
 ---
 title: "Activity: Nuclear Reactors"
-author: "YOUR NAME HERE"
+author: "Jared Hayes"
 output: html_notebook
 ---
 
 ```{r}
 library(tidyverse)
-
+library(rvest)
 ```
 
 ## Scrape the Data 
 
 ```{r}
 #My code here.... 
+page <- "https://en.wikipedia.org/wiki/List_of_commercial_nuclear_reactors"
+tableList <- page %>%
+  read_html() %>%
+  html_nodes(css = "table") %>%
+  html_table(fill = TRUE)
 
-
+Japan<-tableList[[21]]
 ```
 
 
 ## Your turn: In what ways is the table tidy? How is it not tidy? What’s different about it from a tidy table?
 
-My answer here..... 
+It is tidy because each row is a case. It is not tidy because each value does not have its own cell. Values share cells because the cells contain a list of information. It is also not tidy because each variable does not have its own column variables share one column. 
 
 
 ## Your Turn: Plot Net Generation Capacity vs Construction Date
 
 ```{r}
+library(lubridate)
 #my code here 
+Japan<-tableList[[21]]
+Japan<-Japan[-1,1:9]
+Japan <-
+  Japan %>%
+  rename(name = Plantname, 
+         reactor = `UnitNo.`,
+         model = Model,
+         status = Status, 
+         netMW = `Capacity(MW)`,
+         construction = `Beginbuilding`,
+         operation = `Commercialoperation`, 
+         closure = Closed)%>%
+mutate(construction =dmy(construction),
+         operation = dmy(operation),
+         closure = dmy(closure),
+         netMW = as.numeric(netMW),
+         country = "Japan")
 
-
+ggplot(Japan,aes(x=construction,y=netMW,color=Type))+
+  geom_point()
 ```
 
 
@@ -36,7 +60,25 @@ My answer here.....
 
 ```{r}
 #my code here... 
-
+China<-tableList[[10]]
+China<-China[-1,1:9]
+China <-
+  China %>%
+  filter(row_number() > 1) %>%
+  rename(name = Plantname, 
+         reactor = `UnitNo.`,
+         model = Model,
+         status = Status, 
+         netMW = `Capacity(MW)`,
+         construction = `Beginbuilding`,
+         operation = `Commercialoperation`, 
+         closure = Closed)%>%
+mutate(construction =dmy(construction),
+         operation = dmy(operation),
+         closure = dmy(closure),
+         netMW = as.numeric(netMW),
+         country = "China")
+combined_data<-bind_rows(Japan,China)
 ```
 
 
@@ -45,5 +87,17 @@ My answer here.....
 
 ```{r}
 #My code here
+Japan <- Japan %>%
+  mutate(interval = operation - construction)
+
+# Plot time interval for Japan
+ggplot(Japan, aes(x = construction, xend = operation, y = name, yend = name)) +
+  geom_segment(aes(color = Type)) +
+  geom_point(aes(x=closure,y=name,shape=status))+
+  labs(title = "Time Interval from Start of Construction to Operation",
+       x = "Date",
+       y = "Reactor Name",
+       color = "Reactor Type",
+       group="Status")
 
 ```
